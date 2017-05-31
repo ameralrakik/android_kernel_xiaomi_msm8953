@@ -50,7 +50,7 @@ static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 #define MIN_INPUT_INTERVAL (150 * USEC_PER_MSEC)
 
-static unsigned int cnt_nr_running;
+static unsigned int big_nr_running;
 
 static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
@@ -135,7 +135,7 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 			break;
 
  
-		if (cpu == 4 && min > 0 && cnt_nr_running == 0)
+		if (cpu == 4 && min > 0 && big_nr_running == 0)
                         break;
 
 		min = min(min, policy->max);
@@ -166,6 +166,12 @@ static void update_policy_online(void)
 	get_online_cpus();
 	for_each_online_cpu(i) {
 		pr_debug("Updating policy for CPU%d\n", i);
+		/*
+		 * both clusters have synchronous cpus
+		 * no need to upldate the policy for each core
+		 * individually, saving [down|up] write
+		 * and [lock|unlock] irqrestore calls
+		 */
 		cpufreq_update_policy(i);
 		if (i == 0 || i == 4)
 			cpufreq_update_policy(i);
@@ -185,7 +191,7 @@ static void do_input_boost_rem(struct work_struct *work)
 		i_sync_info->input_boost_min = 0;
 	}
 
-	cnt_nr_running = 0;
+	big_nr_running = 0;
 
 	/* Update policies for all online CPUs */
 	update_policy_online();
@@ -216,7 +222,7 @@ static void do_input_boost(struct work_struct *work)
 		i_sync_info->input_boost_min = i_sync_info->input_boost_freq;
 
 		if (i >= 4)
-			cnt_nr_running += cpu_rq(i)->nr_running;
+			big_nr_running += cpu_rq(i)->nr_running;
 	}
 
 	/* Update policies for all online CPUs */
