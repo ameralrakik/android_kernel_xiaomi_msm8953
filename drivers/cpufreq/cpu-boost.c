@@ -162,7 +162,7 @@ static void update_policy_online(void)
 		pr_debug("Updating policy for CPU%d\n", i);
 		/*
 		 * both clusters have synchronous cpus
-		 * no need to upldate the policy for each core
+		 * no need to update the policy for each core
 		 * individually, saving [down|up] write
 		 * and [lock|unlock] irqrestore calls
 		 */
